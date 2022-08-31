@@ -14,6 +14,8 @@ import cherry.fix.Functor.{given Functor[Vector], given Functor[Option]}
 case class Abstract(term: Term, tpe: NormType) extends NormValue:
   def toTerm = Process.pure(term)
 
+  def getType = Process.pure(tpe)
+
   override def isAbstract = true
 
   private def make(term: Process[Term], tpe: Process[NormType]): Process[NormValue] =
@@ -31,6 +33,9 @@ trait RecordValueBase extends NormValue:
   def map: LayeredMap[RecordKey, NormValue]
 
   def toTerm = map.journal.traverse(toRecord).map(joinAll)
+
+  // TODO: implement resolving a record type
+  def getType = map.traverse(_.getType).map(???)
 
   private def toRecord(key: RecordKey, value: NormValue): Process[Term] =
     value.toTerm.map(Lang.set(key, _))
@@ -68,7 +73,19 @@ object RecordValue:
 
   def from(kvs: (RecordKey, NormValue)*) = fromVector(kvs.toVector)
 
+trait FnValueBase extends NormValue:
+  def calcBodyType: Process[NormType]
+  def domain: NormType
+
+  def getType = for
+    resultType <- calcBodyType
+    eff        <- getEffect
+  yield FunctionType(domain, eff, resultType)
+
 case class Closure(context: NormValue, body: Process[NormValue], domain: NormType) extends NormValue:
+
+  // we need to think on this one
+  def getType = ???
 
   private def rebuild: Process[NormValue] =
     for
@@ -95,6 +112,13 @@ case class Closure(context: NormValue, body: Process[NormValue], domain: NormTyp
 end Closure
 
 case class Merge(base: NormValue, ext: NormValue) extends NormValue:
+  def getType =
+    for
+      baseType <- base.getType
+      extType  <- ext.getType
+      res      <- baseType.extended(extType)
+    yield res
+
   def toTerm = base.toTerm.parMap2(ext.toTerm)(Lang.Extend(_, _).fix)
 
   override def merge(ext2: NormValue) = ext.merge(ext2).flatMap(base.merge)
@@ -102,10 +126,14 @@ case class Merge(base: NormValue, ext: NormValue) extends NormValue:
 case class Narrow(base: NormValue, expect: NormType) extends NormValue:
   def toTerm = base.toTerm.map2Par(expect.toTerm)(Lang.Narrow(_, _).fix)
 
+  override def getType: Process[NormType] = Process.pure(expect)
+
 case object UnitValue extends NormValue:
   val toTerm = Process.pure(Lang.Unit)
 
-  val pure = Act.pure(this)
+  val pure = Process.pure(this)
+
+  val getType = Process.pure(BuiltinNormType(BuiltinType.Any))
 
   override def isUnit: Boolean = true
 
@@ -119,8 +147,10 @@ trait BuiltinTypeValue(bt: BuiltinType) extends NormValue:
       case BuiltinNormType(`bt`, _) => Act.pure(this)
       case _                        => super.narrow(domain)
 
-case class Variable(id: Long, hint: String) extends NormValue:
-  def toTerm = Process.pure(Lang.External(LibRef("variable", Lang.Integer(id))))
+  val getType = Process.pure(BuiltinNormType(bt))
+
+//case class Variable(id: Long, hint: String) extends NormValue:
+//  def toTerm = Process.pure(Lang.External(LibRef("variable", Lang.Integer(id))))
 
 case class IntegerValue(value: BigInt) extends BuiltinTypeValue(BuiltinType.Integer):
   def toTerm = Process.pure(Lang.Integer(value))

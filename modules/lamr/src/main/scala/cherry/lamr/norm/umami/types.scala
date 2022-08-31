@@ -12,13 +12,17 @@ import cherry.fix.Functor.{given TraverseFilter[Vector]}
 trait NormType extends NormValue:
   def fieldTypes: Process[Vector[(RecordKey, NormType)]] = Act.pure(Vector.empty)
 
-  def asAbstract: Process[NormValue] = Act.pure(Abstract(Lang.Id, this))
+  def asAbstract: Process[NormValue] = Process.pure(Abstract(Lang.Id, this))
 
-  def applied(arg: NormValue): Process[NormType] = Act.error(Cause.BadType(TypeCause.Function))
+  def applied(arg: NormValue): Process[NormType] = Process.error(Cause.BadType(TypeCause.Function))
 
-  def got(key: RecordKey, up: Int): Process[NormType] = Act.error(Cause.BadType(TypeCause.Record))
+  def got(key: RecordKey, up: Int): Process[NormType] = Process.error(Cause.BadType(TypeCause.Record))
 
-  override def asType: Process[NormType] = Act.pure(this)
+  def extended(ext: NormType): Process[NormType] = Process.pure(ExtendType(this, ext))
+
+  override def asType: Process[NormType] = Process.pure(this)
+
+  override def getType: Process[NormType] = Process.pure(UniverseType(TypeOptions()))
 
 case class BuiltinNormType(bt: BuiltinType, ext: Option[NormType] = None) extends NormType:
   override def toTerm = Process.pure(Lang.Builtin(bt))
@@ -47,6 +51,8 @@ object RecordType:
   def single(key: RecordKey, fieldType: NormType) = RecordType.fromVector(Vector(key -> fieldType))
 
   def fromVector(kvs: Vector[(RecordKey, NormType)]) = RecordType(LayeredMap.fromVector(kvs))
+
+  def tuple(types: NormType*) = fromVector(types.zipWithIndex.map((t, i) => RecordKey.Index(i) -> t).toVector)
 
 case class ExtendType(base: NormType, ext: NormType) extends NormType:
   def toTerm = base.toTerm.parMap2(ext.toTerm)(Lang.Extend(_, _).fix)

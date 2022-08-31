@@ -123,5 +123,3 @@ object Lang:
     def -->(body: Term): Term = Lang.Function(domain, eff, body).fix
 
   given Conversion[BuiltinType, Term] = Lang.Builtin(_)
-
-type LangVal = Fix[Lang]

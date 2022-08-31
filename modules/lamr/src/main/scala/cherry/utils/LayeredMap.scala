@@ -22,6 +22,8 @@ class LayeredMap[K, +V](val journal: Vector[(K, V)], val values: Map[K, List[V]]
   override def toString: String = journal.mkString("LayeredMap(", ", ", ")")
 
 object LayeredMap:
+//  def apply[K, V](kvs: (K, V)*) = fromVector(kvs.toVector)
+
   def fromVector[K, V](v: Vector[(K, V)]): LayeredMap[K, V] = {
     val mut = new mutable.HashMap[K, List[V]]
     for ((k, v) <- v) mut.updateWith(k) {

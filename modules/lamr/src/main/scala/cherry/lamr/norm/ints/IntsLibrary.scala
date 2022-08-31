@@ -1,22 +1,23 @@
 package cherry.lamr.norm.ints
-import cherry.lamr.norm.umami.IntegerValue
-import cherry.lamr.{Lang, LibRef, RecordKey}
-import cherry.lamr.norm.{Cause, Library, NameResolutionLibrary, NormValue, Normalizer, Term, Process}
+import cherry.lamr.norm.umami.{BuiltinNormType, FnValueBase, IntegerValue, SimpleBinaryFn, SimpleBuiltinBinaryFn}
+import cherry.lamr.{BuiltinType, Lang, LibRef, RecordKey}
+import cherry.lamr.norm.{Cause, Library, NameResolutionLibrary, NormValue, Normalizer, Process, Term}
 import cherry.utils.Act
 
 object IntsLibrary extends NameResolutionLibrary("ints"):
-  val members = {
-    case "plus"   => Fn("plus", _ + _)
-    case "minus"  => Fn("minus", _ - _)
-    case "div"    => Fn("div", _ / _)
-    case "mul"    => Fn("mul", _ * _)
-    case "xor"    => Fn("xor", _ ^ _)
-    case "bitand" => Fn("bitand", _ & _)
-    case "bitor"  => Fn("bitor", _ | _)
-    case "gcd"    => Fn("gcd", _ gcd _)
-  }
+  val members = Vector(
+    "plus"   -> Fn("plus", _ + _),
+    "minus"  -> Fn("minus", _ - _),
+    "div"    -> Fn("div", _ / _),
+    "mul"    -> Fn("mul", _ * _),
+    "xor"    -> Fn("xor", _ ^ _),
+    "bitand" -> Fn("bitand", _ & _),
+    "bitor"  -> Fn("bitor", _ | _),
+    "gcd"    -> Fn("gcd", _ gcd _),
+  )
 
-  class Fn(name: String, call: (BigInt, BigInt) => BigInt) extends NormValue:
+  class Fn(name: String, call: (BigInt, BigInt) => BigInt) extends NormValue with SimpleBuiltinBinaryFn:
+    def builtinType     = BuiltinType.Integer
     override def toTerm = Process.pure(Lang.External(LibRef("ints", Lang.get(name))))
 
     override def apply(term: NormValue): Process[NormValue] =

@@ -1,7 +1,7 @@
 package cherry.lamr.norm
 
 import cherry.fix.Fix.Fix
-import cherry.lamr.norm.umami.{NormType, UnitValue, Variable}
+import cherry.lamr.norm.umami.{NormType, UnitValue}
 import cherry.utils.{Act, ActMethods, Raising}
 import cherry.lamr.{BuiltinType, Lang, LibRef, RecordKey}
 
@@ -45,11 +45,3 @@ type Process[+A] = Act[NormState, A]
 
 object Process extends ActMethods[NormState]:
   val context: Process[NormValue] = Process.read(_.context)
-
-def newSymbol[R](name: String, tpe: R): Process[NormValue] =
-  Act.action { ctx =>
-    ctx.state.symbolCount += 1
-    val id = ctx.state.symbolCount
-    ctx.state.symbols += id -> name
-    Variable(id, name)
-  }

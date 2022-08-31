@@ -22,6 +22,10 @@ trait Normalizer:
 trait NormValue:
   def toTerm: Process[Term]
 
+  def getType: Process[NormType]
+
+  def getEffect: Process[NormType] = Process.pure(BuiltinNormType(BuiltinType.Any))
+
   def headNorm: Process[NormValue] = Act.pure(this)
 
   def errorDisplay: Option[String] = Some(toTerm.toString)
